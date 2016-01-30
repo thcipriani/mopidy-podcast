@@ -1,193 +1,223 @@
 from __future__ import unicode_literals
 
-import mopidy.models
+import datetime
+
+from mopidy.models import Image, ValidatedImmutableObject, fields
 
 
-class Image(mopidy.models.ImmutableObject):
-    """Mopidy model type to represent a podcast's image."""
-
-    uri = None
-    """The image's URI."""
-
-    title = None
-    """The image's title."""
-
-    width = None
-    """The image's width in pixels."""
-
-    height = None
-    """The image's height in pixels."""
-
-
-class Enclosure(mopidy.models.ImmutableObject):
+class Enclosure(ValidatedImmutableObject):
     """Mopidy model type to represent an episode's media object."""
 
-    uri = None
+    # TODO: restrict type to {'application/pdf', 'audio/mpeg', 'audio/x-m4a',
+    # 'document/x-epub', 'video/mp4', 'video/quicktime', 'video/x-m4v'}
+
+    uri = fields.URI()
     """The URI of the media object."""
 
-    length = None
-    """The enclosure's file size in bytes."""
+    length = fields.Integer(min=0)
+    """The media object's file size in bytes."""
 
-    type = None
-    """The MIME type of the enclosure, e.g. :const:`audio/mpeg`."""
-
-
-class Podcast(mopidy.models.ImmutableObject):
-    """Mopidy model type to represent a podcast."""
-
-    uri = None
-    """The podcast URI.
-
-    For podcasts distributed as RSS feeds, the podcast URI is the URL
-    from which the RSS feed can be retrieved.
-
-    To distinguish between podcast and episode URIs, the podcast URI
-    *MUST NOT* contain a fragment identifier.
-
-    """
-
-    title = None
-    """The podcast's title."""
-
-    link = None
-    """The URL of the HTML website corresponding to the podcast."""
-
-    copyright = None
-    """The podcast's copyright notice."""
-
-    language = None
-    """The podcast's ISO two-letter language code."""
-
-    pubdate = None
-    """The podcast's publication date and time as an instance of
-    :class:`datetime.datetime`.
-
-    """
-
-    author = None
-    """The podcast's author's name."""
-
-    block = None
-    """Prevent a podcast from appearing in the directory."""
-
-    category = None
-    """The main category of the podcast."""
-
-    image = None
-    """An image to be displayed with the podcast as an instance of
-    :class:`Image`.
-
-    """
-
-    explicit = None
-    """Indicates whether the podcast contains explicit material."""
-
-    complete = None
-    """Indicates completion of the podcast."""
-
-    newfeedurl = None
-    """Used to inform of new feed URL location."""
-
-    subtitle = None
-    """A short description of the podcast."""
-
-    summary = None
-    """A description of the podcast, up to 4000 characters long."""
-
-    episodes = tuple()
-    """The podcast's episodes as a read-only :class:`tuple` of
-    :class:`Episode` instances.
-
-    """
-
-    def __init__(self, *args, **kwargs):
-        self.__dict__['episodes'] = tuple(
-            kwargs.pop('episodes', None) or []
-        )
-        super(Podcast, self).__init__(*args, **kwargs)
+    type = fields.Identifier()
+    """The media object's MIME type, for example :const:`audio/mpeg`."""
 
 
-class Episode(mopidy.models.ImmutableObject):
+class Episode(ValidatedImmutableObject):
     """Mopidy model type to represent a podcast episode."""
 
-    uri = None
-    """The episode URI.
+    guid = fields.String()
+    """A case-sensitive GUID that uniquely identifies the episode."""
 
-    If the episode contains an enclosure, the episode URI *MUST*
-    consist of the associated podcast URI with the enclosure URL
-    appended as a fragment identifier.
-
-    """
-
-    title = None
+    title = fields.String()
     """The episode's title."""
 
-    guid = None
-    """A string that uniquely identifies the episode."""
+    pubdate = fields.Field(type=datetime.datetime)
+    """The episode's publication date as an instance of
+    :class:`datetime.datetime`."""
 
-    pubdate = None
-    """The episode's publication date and time as an instance of
-    :class:`datetime.datetime`.
+    author = fields.String()
+    """The episode author's name."""
 
-    """
-
-    author = None
-    """The episode's author's name."""
-
-    block = None
+    block = fields.Field(type=bool)
     """Prevent an episode from appearing in the directory."""
 
-    image = None
+    image = fields.Field(type=Image)
     """An image to be displayed with the episode as an instance of
     :class:`Image`.
 
     """
 
-    duration = None
-    """The episode's duration as an instance of
-    :class:`datetime.timedelta`.
+    duration = fields.Field(type=datetime.timedelta)
+    """The episode's duration as a :class:`datetime.timedelta`."""
 
-    """
-
-    explicit = None
+    explicit = fields.Field(type=bool)
     """Indicates whether the episode contains explicit material."""
 
-    order = None
+    order = fields.Integer(min=1)
     """Overrides the default ordering of episodes."""
 
-    subtitle = None
-    """A short description of the episode."""
+    description = fields.String()
+    """A description of the episode."""
 
-    summary = None
-    """A description of the episode, up to 4000 characters long."""
-
-    enclosure = None
+    enclosure = fields.Field(type=Enclosure)
     """The media object, e.g. the audio stream, attached to the episode as
     an instance of :class:`Enclosure`.
 
     """
 
 
-class Ref(mopidy.models.Ref):
-    """Extends :class:`mopidy.models.Ref` to provide factory methods and
-    type constants for :class:`Podcast` and :class:`Episode`.
+class Podcast(ValidatedImmutableObject):
+    """Mopidy model type to represent a podcast."""
+
+    uri = fields.URI()
+    """The podcast's URI.
+
+    For podcasts distributed as RSS feeds, the podcast's URI is the
+    URL from which the RSS feed can be retrieved.
+
+    Podcast URIs *MUST NOT* contain fragment identifiers.
 
     """
 
-    PODCAST = 'podcast'
+    title = fields.String()
+    """The podcast's title."""
+
+    link = fields.URI()
+    """The URL of a website corresponding to the podcast."""
+
+    copyright = fields.String()
+    """The podcast's copyright notice."""
+
+    language = fields.Identifier()
+    """The podcast's ISO two-letter language code."""
+
+    author = fields.String()
+    """The podcast author's name."""
+
+    block = fields.Field(type=bool)
+    """Prevent a podcast from appearing in the directory."""
+
+    category = fields.String()
+    """The main category of the podcast."""
+
+    image = fields.Field(type=Image)
+    """An image to be displayed with the podcast as an instance of
+    :class:`Image`.
+
+    """
+
+    explicit = fields.Field(type=bool)
+    """Indicates whether the podcast contains explicit material."""
+
+    complete = fields.Field(type=bool)
+    """Indicates completion of the podcast."""
+
+    newfeedurl = fields.URI()
+    """Used to inform of new feed URL location."""
+
+    description = fields.String()
+    """A description of the podcast."""
+
+    episodes = fields.Collection(type=Episode, container=tuple)
+    """The podcast's episodes as a :class:`tuple` of :class:`Episode`
+    instances.
+
+    """
+
+    # TODO: owner w/nested name, email?
+
+
+class Outline(ValidatedImmutableObject):
+    """Mopidy model type to represent an OPML 2.0 outline."""
+
+    INCLUDE = 'include'
     """Constant used for comparison with the :attr:`type` field."""
 
-    EPISODE = 'episode'
+    LINK = 'link'
+    """Constant used for comparison with the :attr:`type` field."""
+
+    RSS = 'rss'
     """Constant used for comparison with the :attr:`type` field."""
 
     @classmethod
-    def podcast(cls, **kwargs):
-        """Create a :class:`Ref` with :attr:`type` :attr:`PODCAST`."""
-        kwargs['type'] = Ref.PODCAST
-        return cls(**kwargs)
+    def include(cls, **kwargs):
+        """Create an :class:`Outline` of :attr:`type` :attr:`INCLUDE`."""
+        return cls(type=cls.INCLUDE, **kwargs)
 
     @classmethod
-    def episode(cls, **kwargs):
-        """Create a :class:`Ref` with :attr:`type` :attr:`EPISODE`."""
-        kwargs['type'] = Ref.EPISODE
-        return cls(**kwargs)
+    def link(cls, **kwargs):
+        """Create an :class:`Outline` of :attr:`type` :attr:`LINK`."""
+        return cls(type=cls.LINK, **kwargs)
+
+    @classmethod
+    def rss(cls, **kwargs):
+        """Create an :class:`Outline` of :attr:`type` :attr:`RSS`."""
+        return cls(type=cls.RSS, **kwargs)
+
+    text = fields.String()
+    """The text to be displayed for the outline."""
+
+    type = fields.Identifier()
+    """The type of the outline or :class:`None`."""
+
+    created = fields.Field(type=datetime.datetime)
+    """The date-time that the outline node was created."""
+
+    category = fields.String()
+    """A string of comma-separated slash-delimited category
+    strings."""
+
+    description = fields.String()
+    """The top-level description element from the feed pointed to."""
+
+    language = fields.Identifier()
+    """The top-level language element from the feed pointed to."""
+
+    title = fields.String()
+    """The top-level title element from the feed pointed to."""
+
+    uri = fields.URI()
+    """The outline's URI."""
+
+
+class Term(ValidatedImmutableObject):
+    """Mopidy model type to represent a search term."""
+
+    PODCAST_TITLE = 'podcast.title'
+    """Constant used for comparison with the :attr:`attribute` field."""
+
+    EPISODE_TITLE = 'episode.title'
+    """Constant used for comparison with the :attr:`attribute` field."""
+
+    PODCAST_AUTHOR = 'podcast.author'
+    """Constant used for comparison with the :attr:`attribute` field."""
+
+    EPISODE_AUTHOR = 'episode.author'
+    """Constant used for comparison with the :attr:`attribute` field."""
+
+    CATEGORY = 'category'
+    """Constant used for comparison with the :attr:`attribute` field."""
+
+    PUBDATE = 'pubdate'
+    """Constant used for comparison with the :attr:`attribute` field."""
+
+    DESCRIPTION = 'description'
+    """Constant used for comparison with the :attr:`attribute` field."""
+
+    attribute = fields.Field(type=basestring, choices=[
+        PODCAST_TITLE, EPISODE_TITLE, PODCAST_AUTHOR, EPISODE_AUTHOR,
+        CATEGORY, PUBDATE, DESCRIPTION
+    ])
+    """The search term's attribute or :class:`None`."""
+
+    values = fields.Collection(type=basestring, container=frozenset)
+    """The search terms's set of values."""
+
+
+class Query(ValidatedImmutableObject):
+    """Mopidy model type to represent a search query."""
+
+    terms = fields.Collection(type=Term, container=tuple)
+    """The query's terms."""
+
+    exact = fields.Field(type=bool, default=False)
+    """Indicates an exact query."""
