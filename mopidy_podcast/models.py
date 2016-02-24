@@ -9,7 +9,7 @@ class Enclosure(ValidatedImmutableObject):
     """Mopidy model type to represent an episode's media object."""
 
     # TODO: restrict type to {'application/pdf', 'audio/mpeg', 'audio/x-m4a',
-    # 'document/x-epub', 'video/mp4', 'video/quicktime', 'video/x-m4v'}
+    # 'document/x-epub', 'video/mp4', 'video/quicktime', 'video/x-m4v'}?
 
     uri = fields.URI()
     """The URI of the media object."""
@@ -69,12 +69,8 @@ class Podcast(ValidatedImmutableObject):
     """Mopidy model type to represent a podcast."""
 
     uri = fields.URI()
-    """The podcast's URI.
-
-    For podcasts distributed as RSS feeds, the podcast's URI is the
+    """For podcasts distributed as RSS feeds, the podcast's URI is the
     URL from which the RSS feed can be retrieved.
-
-    Podcast URIs *MUST NOT* contain fragment identifiers.
 
     """
 
@@ -122,8 +118,6 @@ class Podcast(ValidatedImmutableObject):
     instances.
 
     """
-
-    # TODO: owner w/nested name, email?
 
 
 class Outline(ValidatedImmutableObject):
@@ -182,32 +176,8 @@ class Outline(ValidatedImmutableObject):
 class Term(ValidatedImmutableObject):
     """Mopidy model type to represent a search term."""
 
-    PODCAST_TITLE = 'podcast.title'
-    """Constant used for comparison with the :attr:`attribute` field."""
-
-    EPISODE_TITLE = 'episode.title'
-    """Constant used for comparison with the :attr:`attribute` field."""
-
-    PODCAST_AUTHOR = 'podcast.author'
-    """Constant used for comparison with the :attr:`attribute` field."""
-
-    EPISODE_AUTHOR = 'episode.author'
-    """Constant used for comparison with the :attr:`attribute` field."""
-
-    CATEGORY = 'category'
-    """Constant used for comparison with the :attr:`attribute` field."""
-
-    PUBDATE = 'pubdate'
-    """Constant used for comparison with the :attr:`attribute` field."""
-
-    DESCRIPTION = 'description'
-    """Constant used for comparison with the :attr:`attribute` field."""
-
-    attribute = fields.Field(type=basestring, choices=[
-        PODCAST_TITLE, EPISODE_TITLE, PODCAST_AUTHOR, EPISODE_AUTHOR,
-        CATEGORY, PUBDATE, DESCRIPTION
-    ])
-    """The search term's attribute or :class:`None`."""
+    field = fields.Field(type=fields.Field)
+    """The search term's field or :class:`None`."""
 
     values = fields.Collection(type=basestring, container=frozenset)
     """The search terms's set of values."""
