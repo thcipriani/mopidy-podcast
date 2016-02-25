@@ -18,23 +18,22 @@ class Extension(ext.Extension):
 
     def get_config_schema(self):
         schema = super(Extension, self).get_config_schema()
+        schema['feeds'] = config.List(optional=True)
+        schema['import_dir'] = config.Path(optional=True)
+        schema['update_interval'] = config.Integer(minimum=3600)
         schema['browse_order'] = config.String(choices=['asc', 'desc'])
         schema['lookup_order'] = config.String(choices=['asc', 'desc'])
         schema['search_limit'] = config.Integer(optional=True, minimum=1)
-        schema['feeds'] = config.List(optional=True)
-        schema['update_interval'] = config.Integer(minimum=3600)
         schema['cache_size'] = config.Integer(minimum=1)
         schema['cache_ttl'] = config.Integer(minimum=1)
         schema['timeout'] = config.Integer(optional=True, minimum=1)
-
-        # no longer user
+        # no longer used
         schema['browse_limit'] = config.Deprecated()
         schema['search_details'] = config.Deprecated()
         schema['feeds_root_name'] = config.Deprecated()
         schema['feeds_cache_size'] = config.Deprecated()
         schema['feeds_cache_ttl'] = config.Deprecated()
         schema['feeds_timeout'] = config.Deprecated()
-
         return schema
 
     def setup(self, registry):

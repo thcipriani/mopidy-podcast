@@ -63,6 +63,7 @@ class PodcastLibraryProvider(backend.LibraryProvider):
     def refresh(self, uri=None):
         # TODO: refresh by uri?
         self.backend.podcasts.clear()
+        self.backend.indexer.proxy().refresh()
         self.__tracks.clear()
 
     def search(self, query=None, uris=None, exact=False):

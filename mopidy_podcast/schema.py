@@ -204,19 +204,24 @@ def update(cursor, podcast):
         'newfeedurl': podcast.newfeedurl,
         'description': podcast.description
     })
-    # TODO: remove old episodes?
-    for episode in podcast.episodes:
-        cursor.execute(UPDATE_EPISODE, {
-            'uri': podcast.uri,
-            'guid': episode.guid,
-            'title': episode.title,
-            'pubdate': episode.pubdate,
-            'author': episode.author,
-            'block': episode.block,
-            'duration': episode.duration,
-            'explicit': episode.explicit,
-            'description': episode.description
-        })
+    cursor.executemany(UPDATE_EPISODE, [{
+        'uri': podcast.uri,
+        'guid': episode.guid,
+        'title': episode.title,
+        'pubdate': episode.pubdate,
+        'author': episode.author,
+        'block': episode.block,
+        'duration': episode.duration,
+        'explicit': episode.explicit,
+        'description': episode.description
+    } for episode in podcast.episodes])
+
+
+def cleanup(cursor, uris):
+    sql = 'DELETE FROM podcast WHERE uri NOT IN (%s)' % (
+        ', '.join(['?'] * len(uris))
+    )
+    return cursor.execute(sql, uris)
 
 
 def _indexed_search(cursor, query, offset=0, limit=-1):

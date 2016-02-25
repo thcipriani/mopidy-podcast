@@ -120,59 +120,6 @@ class Podcast(ValidatedImmutableObject):
     """
 
 
-class Outline(ValidatedImmutableObject):
-    """Mopidy model type to represent an OPML 2.0 outline."""
-
-    INCLUDE = 'include'
-    """Constant used for comparison with the :attr:`type` field."""
-
-    LINK = 'link'
-    """Constant used for comparison with the :attr:`type` field."""
-
-    RSS = 'rss'
-    """Constant used for comparison with the :attr:`type` field."""
-
-    @classmethod
-    def include(cls, **kwargs):
-        """Create an :class:`Outline` of :attr:`type` :attr:`INCLUDE`."""
-        return cls(type=cls.INCLUDE, **kwargs)
-
-    @classmethod
-    def link(cls, **kwargs):
-        """Create an :class:`Outline` of :attr:`type` :attr:`LINK`."""
-        return cls(type=cls.LINK, **kwargs)
-
-    @classmethod
-    def rss(cls, **kwargs):
-        """Create an :class:`Outline` of :attr:`type` :attr:`RSS`."""
-        return cls(type=cls.RSS, **kwargs)
-
-    text = fields.String()
-    """The text to be displayed for the outline."""
-
-    type = fields.Identifier()
-    """The type of the outline or :class:`None`."""
-
-    created = fields.Field(type=datetime.datetime)
-    """The date-time that the outline node was created."""
-
-    category = fields.String()
-    """A string of comma-separated slash-delimited category
-    strings."""
-
-    description = fields.String()
-    """The top-level description element from the feed pointed to."""
-
-    language = fields.Identifier()
-    """The top-level language element from the feed pointed to."""
-
-    title = fields.String()
-    """The top-level title element from the feed pointed to."""
-
-    uri = fields.URI()
-    """The outline's URI."""
-
-
 class Term(ValidatedImmutableObject):
     """Mopidy model type to represent a search term."""
 
