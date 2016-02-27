@@ -1,58 +1,49 @@
 from __future__ import unicode_literals
 
+import collections
 import operator
+import re
 
 from mopidy.models import Album, Artist, Ref, Track
 
 import uritools
 
-from . import Extension, models
+from . import Extension
 
-_FIELDS = {
-   'any': None,
-   'album': models.Podcast.title,
-   'albumartist': models.Podcast.author,
-   'artist': models.Episode.author,
-   'comment': models.Episode.description,
-   'date': models.Episode.pubdate,
-   'genre': models.Podcast.category,
-   'track_name': models.Episode.title
+_EXPRESSIONS = {
+    # field is "track", while search keyword is "track_name"?
+    'track': 'episode.title',
+    'artist': 'episode.author',
+    'albumartist': 'podcast.author',
+    'album': 'podcast.title',
+    'date': 'date(pubdate)',
+    'genre': 'category'
+}
+
+_PARAMETERS = {
+    'track_name': 'episode_title',
+    'album': 'podcast_title',
+    'artist': 'episode_author',
+    'albumartist': 'podcast_author',
+    'genre': 'category',
+    'date': 'pubdate',
+    'comment': 'description',
+    'any': 'any'
 }
 
 
-def _trackuri(uri, guid, safe=uritools.SUB_DELIMS+b':@/?'):
+def _albumuri(feedurl):
+    return uritools.uridefrag(Extension.ext_name + '+' + feedurl).uri
+
+
+def _trackuri(albumuri, guid, safe=uritools.SUB_DELIMS+b':@/?'):
     # timeit shows approx. factor 3 difference
-    # return uri + uritools.uricompose(fragment=guid)
-    return uri + '#' + uritools.uriencode(guid, safe=safe)
+    # return albumuri + uritools.uricompose(fragment=guid)
+    return albumuri + '#' + uritools.uriencode(guid, safe=safe)
 
 
-def _track(episode, album, **kwargs):
-    return Track(
-        uri=_trackuri(album.uri, episode.guid),
-        name=episode.title,
-        album=album,
-        artists=(
-            [Artist(name=episode.author)]
-            if episode.author
-            else None
-        ),
-        date=(
-            episode.pubdate.date().isoformat()
-            if episode.pubdate
-            else None
-        ),
-        length=(
-            int(episode.duration.total_seconds() * 1000)
-            if episode.duration
-            else None
-        ),
-        comment=episode.description,
-        **kwargs
-    )
-
-
-def ref(feedurl, title, guid=None):
-    uri, _ = uritools.uridefrag(Extension.ext_name + '+' + feedurl)
+def ref(feedurl, title, guid=None, *args):
+    uri = _albumuri(feedurl)
     if guid:
         return Ref.track(uri=_trackuri(uri, guid), name=title)
     else:
@@ -60,58 +51,84 @@ def ref(feedurl, title, guid=None):
 
 
 def album(podcast):
-    uri, _ = uritools.uridefrag(Extension.ext_name + '+' + podcast.uri)
     return Album(
-        uri=uri,
+        uri=_albumuri(podcast.uri),
         name=podcast.title,
-        artists=(
-            [Artist(name=podcast.author)]
-            if podcast.author
-            else None
-        ),
+        artists=([Artist(name=podcast.author)] if podcast.author else None),
         num_tracks=len(podcast.episodes)
     )
 
 
-def tracks(podcast, key=operator.attrgetter('pubdate'), reverse=False):
-    uri, _ = uritools.uridefrag(Extension.ext_name + '+' + podcast.uri)
-    album = Album(
-        uri=uri,
-        name=podcast.title,
-        artists=(
-            [Artist(name=podcast.author)]
-            if podcast.author
-            else None
-        ),
-        num_tracks=len(podcast.episodes)
-    )
-    genre = podcast.category
-    # TODO: support <itunes:order>?
-    episodes = sorted(podcast.episodes, key=key, reverse=reverse)
-    for index, episode in enumerate(episodes, start=1):
-        # TODO: filter block/media type?
-        if episode.enclosure and episode.enclosure.uri:
-            yield _track(episode, album=album, genre=genre, track_no=index)
+def tracks(podcast, key=operator.attrgetter('pubdate'), _album=album):
+    album = _album(podcast)
+    result = collections.OrderedDict()
+    # TODO: support <itunes:order>
+    for index, episode in enumerate(sorted(podcast.episodes, key=key), 1):
+        # TODO: filter by block/explicit/media type?
+        if not episode.guid:
+            continue
+        if not episode.enclosure or not episode.enclosure.uri:
+            continue
+        uri = _trackuri(album.uri, episode.guid)
+        result[uri] = Track(
+            uri=uri,
+            name=episode.title,
+            album=album,
+            artists=(
+                [Artist(name=episode.author)]
+                if episode.author
+                else None
+            ),
+            date=(
+                episode.pubdate.date().isoformat()
+                if episode.pubdate
+                else None
+            ),
+            length=(
+                int(episode.duration.total_seconds() * 1000)
+                if episode.duration
+                else None
+            ),
+            comment=episode.description,
+            genre=podcast.category,
+            track_no=index
+        )
+    return result
 
 
 def images(podcast):
-    uri, _ = uritools.uridefrag(Extension.ext_name + '+' + podcast.uri)
-    default = [podcast.image] if podcast.image else None
+    uri = _albumuri(podcast.uri)
+    default = [podcast.image] if podcast.image else []
+    result = {uri: default}
     for episode in podcast.episodes:
         if episode.image:
-            yield (_trackuri(uri, episode.guid), [episode.image])
+            images = [episode.image] + default
         else:
-            yield (_trackuri(uri, episode.guid), default)
+            images = default
+        result[_trackuri(uri, episode.guid)] = images
+    return result
 
 
-def query(query, uris, exact=False):
-    # TODO: uris
-    terms = []
+def field(name):
+    try:
+        expr = _EXPRESSIONS[name]
+    except KeyError:
+        raise NotImplementedError('Field "%s" not supported' % name)
+    else:
+        return expr
+
+
+def query(query, exact=True, re=re.compile(r'["^*]')):
+    params = {}
     for key, values in query.items():
-        try:
-            field = _FIELDS[key]
-        except KeyError:
-            raise NotImplementedError('Search key "%s" not supported' % key)
+        if exact:
+            value = ''.join(values)  # FIXME: multi-valued exact queries?
         else:
-            terms.append(models.Term(field=field, values=values))
-    return models.Query(terms=terms, exact=exact)
+            value = ' '.join('"%s"' % re.sub(' ', v) for v in values)
+        try:
+            name = _PARAMETERS[key]
+        except KeyError:
+            raise NotImplementedError('Search field "%s" not supported' % key)
+        else:
+            params[name] = value
+    return params

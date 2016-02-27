@@ -15,7 +15,6 @@ def test_get_config_schema():
     assert 'import_dir' in schema
     assert 'update_interval' in schema
     assert 'browse_order' in schema
-    assert 'lookup_order' in schema
     assert 'cache_size' in schema
     assert 'cache_ttl' in schema
     assert 'timeout' in schema

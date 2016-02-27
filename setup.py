@@ -29,6 +29,7 @@ setup(
         'Mopidy >= 1.1.1',
         'Pykka >= 1.1',
         'cachetools >= 1.0',
+        'requests >= 2.0',
         'uritools >= 1.0'
     ],
     entry_points={

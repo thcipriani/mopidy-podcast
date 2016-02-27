@@ -10,6 +10,7 @@ CREATE TABLE podcast (
     link            TEXT,               -- URL of the podcast's website
     copyright       TEXT,               -- podcast copyright notice
     language        TEXT,               -- ISO two-letter language code
+    pubdate         TEXT,               -- podcast last publication date and time
     author          TEXT,               -- podcast author's name
     block           INTEGER,            -- whether the podcast should be blocked
     category        TEXT,               -- the podcast's main category
@@ -21,14 +22,15 @@ CREATE TABLE podcast (
 
 CREATE TABLE episode (
     uri             TEXT REFERENCES podcast(uri) ON DELETE CASCADE ON UPDATE CASCADE,
-    guid            TEXT PRIMARY KEY,   -- episode GUID
+    guid            TEXT NOT NULL,      -- episode GUID
     title           TEXT NOT NULL,      -- episode title
     pubdate         TEXT,               -- episode publication date and time
     author          TEXT,               -- episode author's name
     block           INTEGER,            -- whether the epidode should be blocked
     duration        REAL,               -- episode duration in seconds
     explicit        INTEGER,            -- whether the episode contains explicit material
-    description     TEXT                -- description of the episode
+    description     TEXT,               -- description of the episode
+    PRIMARY KEY (uri, guid)             -- GUIDs may not be as unique as they shoulde be
 );
 
 CREATE INDEX podcast_title_index        ON podcast (title);

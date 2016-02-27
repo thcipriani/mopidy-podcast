@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 def get_media_uri(podcast, guid):
     # TODO: filter media types, blocked?
-    # TODO: also match media uri for backward compatibility?
     for episode in podcast.episodes:
         if episode.guid == guid and episode.enclosure:
             return episode.enclosure.uri

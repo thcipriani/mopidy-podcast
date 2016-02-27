@@ -2,9 +2,13 @@ from __future__ import unicode_literals
 
 import os
 
-from mopidy import config, ext, httpclient
+from mopidy import config, exceptions, ext, httpclient
 
 __version__ = '2.0.0'
+
+
+class BackendError(exceptions.BackendError):
+    pass
 
 
 class Extension(ext.Extension):
@@ -20,9 +24,8 @@ class Extension(ext.Extension):
         schema = super(Extension, self).get_config_schema()
         schema['feeds'] = config.List(optional=True)
         schema['import_dir'] = config.Path(optional=True)
-        schema['update_interval'] = config.Integer(minimum=3600)
+        schema['update_interval'] = config.Integer(minimum=60)
         schema['browse_order'] = config.String(choices=['asc', 'desc'])
-        schema['lookup_order'] = config.String(choices=['asc', 'desc'])
         schema['search_limit'] = config.Integer(optional=True, minimum=1)
         schema['cache_size'] = config.Integer(minimum=1)
         schema['cache_ttl'] = config.Integer(minimum=1)
@@ -41,17 +44,11 @@ class Extension(ext.Extension):
         registry.add('backend', PodcastBackend)
 
     @classmethod
-    def get_url_opener(cls, config):
-        import urllib2
+    def get_requests_session(cls, config):
+        import requests
+        session = requests.Session()
         proxy = httpclient.format_proxy(config['proxy'])
-        if proxy:
-            opener = urllib2.build_opener(
-                urllib2.ProxyHandler({'http': proxy, 'https': proxy})
-            )
-        else:
-            opener = urllib2.build_opener()
+        session.proxies.update({'http': proxy, 'https': proxy})
         name = '%s/%s' % (cls.dist_name, cls.version)
-        opener.addheaders = [
-            ('User-agent', httpclient.format_user_agent(name))
-        ]
-        return opener
+        session.headers['User-Agent'] = httpclient.format_user_agent(name)
+        return session

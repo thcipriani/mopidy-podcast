@@ -94,7 +94,6 @@ def _enclosure(e):
 
 
 def _episode(e):
-    # TODO: uriencode guid?
     kwargs = {
         'guid': _tag(e, 'guid'),
         'title': _tag(e, 'title'),
@@ -115,7 +114,7 @@ def _episode(e):
     return Episode(**kwargs)
 
 
-def _podcast(e, uri):
+def _podcast(e, uri, mtime=None):
     kwargs = {
         'uri': uri,
         'title': _tag(e, 'title'),
@@ -130,8 +129,14 @@ def _podcast(e, uri):
         'complete': _tag(e, 'itunes:complete', _bool),
         'newfeedurl': _tag(e, 'itunes:new-feed-url'),
         'description': _tag(e, 'itunes:summary'),
-        'episodes': map(_episode, e.iter(tag='item'))
+        'episodes': tuple(map(_episode, e.iter(tag='item')))
     }
+    # channel <pubDate> and <lastbuildDate> seems to be largely
+    # unsupported or unreliable with podcasts
+    if mtime:
+        kwargs['pubdate'] = datetime.datetime.utcfromtimestamp(mtime)
+    else:
+        kwargs['pubdate'] = max(e.pubdate for e in kwargs['episodes'])
     if not kwargs['image']:
         kwargs['image'] = _tag(e, 'image', _image)
     if not kwargs['description']:
@@ -143,16 +148,21 @@ def parse(source, uri=None):
     channel = xml.etree.ElementTree.parse(source).find('channel')
     if channel is None:
         raise TypeError('Not an RSS feed')
+    header = getattr(source, 'headers', {}).get('last-modified')
+    if header:
+        mtime = email.utils.mktime_tz(email.utils.parsedate_tz(header))
     else:
-        return _podcast(channel, uri or source.geturl())
+        mtime = None
+    return _podcast(channel, uri or source.geturl(), mtime)
 
 
 if __name__ == '__main__':
     import argparse
     import contextlib
     import json
-    import urllib2
     import sys
+
+    from urllib2 import urlopen
 
     import mopidy.models
 
@@ -171,8 +181,7 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--timeout', type=float)
     args = parser.parse_args()
 
-    opener = urllib2.build_opener()  # TODO: proxies, auth, etc.
-    with contextlib.closing(opener.open(args.uri, timeout=args.timeout)) as f:
-        obj = parse(f)
+    with contextlib.closing(urlopen(args.uri, timeout=args.timeout)) as source:
+        obj = parse(source)
     json.dump(obj, sys.stdout, cls=JSONEncoder, indent=args.indent)
     sys.stdout.write('\n')

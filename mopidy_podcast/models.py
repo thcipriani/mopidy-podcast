@@ -1,6 +1,6 @@
 from __future__ import unicode_literals
 
-import datetime
+from datetime import datetime, timedelta
 
 from mopidy.models import Image, ValidatedImmutableObject, fields
 
@@ -8,15 +8,14 @@ from mopidy.models import Image, ValidatedImmutableObject, fields
 class Enclosure(ValidatedImmutableObject):
     """Mopidy model type to represent an episode's media object."""
 
-    # TODO: restrict type to {'application/pdf', 'audio/mpeg', 'audio/x-m4a',
-    # 'document/x-epub', 'video/mp4', 'video/quicktime', 'video/x-m4v'}?
-
     uri = fields.URI()
     """The URI of the media object."""
 
     length = fields.Integer(min=0)
     """The media object's file size in bytes."""
 
+    # TODO: restrict type to {'application/pdf', 'audio/mpeg', 'audio/x-m4a',
+    # 'document/x-epub', 'video/mp4', 'video/quicktime', 'video/x-m4v'}?
     type = fields.Identifier()
     """The media object's MIME type, for example :const:`audio/mpeg`."""
 
@@ -30,29 +29,30 @@ class Episode(ValidatedImmutableObject):
     title = fields.String()
     """The episode's title."""
 
-    pubdate = fields.Field(type=datetime.datetime)
+    # TODO: default necessary for sorting?
+    pubdate = fields.Field(type=datetime, default=datetime.fromtimestamp(0))
     """The episode's publication date as an instance of
     :class:`datetime.datetime`."""
 
     author = fields.String()
     """The episode author's name."""
 
-    block = fields.Field(type=bool)
+    block = fields.Field(type=bool, default=False)
     """Prevent an episode from appearing in the directory."""
 
     image = fields.Field(type=Image)
     """An image to be displayed with the episode as an instance of
-    :class:`Image`.
+    :class:`mopidy.models.Image`.
 
     """
 
-    duration = fields.Field(type=datetime.timedelta)
+    duration = fields.Field(type=timedelta)
     """The episode's duration as a :class:`datetime.timedelta`."""
 
     explicit = fields.Field(type=bool)
     """Indicates whether the episode contains explicit material."""
 
-    order = fields.Integer(min=1)
+    order = fields.Integer()
     """Overrides the default ordering of episodes."""
 
     description = fields.String()
@@ -86,10 +86,14 @@ class Podcast(ValidatedImmutableObject):
     language = fields.Identifier()
     """The podcast's ISO two-letter language code."""
 
+    pubdate = fields.Field(type=datetime)
+    """The podcast's publication date as an instance of
+    :class:`datetime.datetime`."""
+
     author = fields.String()
     """The podcast author's name."""
 
-    block = fields.Field(type=bool)
+    block = fields.Field(type=bool, default=False)
     """Prevent a podcast from appearing in the directory."""
 
     category = fields.String()
@@ -97,14 +101,14 @@ class Podcast(ValidatedImmutableObject):
 
     image = fields.Field(type=Image)
     """An image to be displayed with the podcast as an instance of
-    :class:`Image`.
+    :class:`mopidy.models.Image`.
 
     """
 
     explicit = fields.Field(type=bool)
     """Indicates whether the podcast contains explicit material."""
 
-    complete = fields.Field(type=bool)
+    complete = fields.Field(type=bool, default=False)
     """Indicates completion of the podcast."""
 
     newfeedurl = fields.URI()
@@ -118,23 +122,3 @@ class Podcast(ValidatedImmutableObject):
     instances.
 
     """
-
-
-class Term(ValidatedImmutableObject):
-    """Mopidy model type to represent a search term."""
-
-    field = fields.Field(type=fields.Field)
-    """The search term's field or :class:`None`."""
-
-    values = fields.Collection(type=basestring, container=frozenset)
-    """The search terms's set of values."""
-
-
-class Query(ValidatedImmutableObject):
-    """Mopidy model type to represent a search query."""
-
-    terms = fields.Collection(type=Term, container=tuple)
-    """The query's terms."""
-
-    exact = fields.Field(type=bool, default=False)
-    """Indicates an exact query."""
